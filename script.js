@@ -49,7 +49,6 @@ function displayYearlyData(year, location, dinnerLocation, noteworthy, playersDa
     timeline.appendChild(entry);
 }
 
-
 function processAndDisplayData(data) {
     for (let year in data.events) {
         totalYears++;
@@ -64,18 +63,18 @@ function processAndDisplayData(data) {
             let details = playersData[player];
             let placement = details.placement;
 
-            if (placement && !isNaN(placement)) {
+            if (placement !== undefined && placement !== "") {
                 playerTotalPlacements[player] = (playerTotalPlacements[player] || 0) + 1;
                 playerAveragePlacement[player] = (playerAveragePlacement[player] || 0) + placement;
             }
 
-            if (details.points && !isNaN(details.points)) {
+            if (details.points !== undefined && details.points !== "") {
                 playerTotalPoints[player] = (playerTotalPoints[player] || 0) + parseInt(details.points);
             }
 
             if (placement === 1.0) {
                 playerWins[player] = (playerWins[player] || 0) + 1;
-                totalFirstPlacePoints += playerTotalPoints[player];
+                totalFirstPlacePoints += (details.points !== undefined && details.points !== "") ? parseInt(details.points) : 0; 
             }
         }
 
@@ -83,21 +82,25 @@ function processAndDisplayData(data) {
     }
 
     let mostWinsPlayer = Object.keys(playerWins).reduce((a, b) => playerWins[a] > playerWins[b] ? a : b);
-    let mostLikelyToWinPlayer = Object.keys(playerAveragePlacement).reduce((a, b) => (playerAveragePlacement[a] / playerTotalPlacements[a]) < (playerAveragePlacement[b] / playerTotalPlacements[b]) ? a : b);
     let averageWinPoints = (totalFirstPlacePoints / totalYears).toFixed(2);
 
-    displaySummaryCard(mostWinsPlayer, mostLikelyToWinPlayer, averageWinPoints);
+    // Filter out players who have only 1 event and then find the favourite based on average points.
+    let favouriteToWinPlayer = Object.keys(playerTotalPoints)
+        .filter(player => playerTotalPlacements[player] > 1)
+        .reduce((a, b) => (playerTotalPoints[a] / playerTotalPlacements[a]) > (playerTotalPoints[b] / playerTotalPlacements[b]) ? a : b);
+
+    displaySummaryCard(mostWinsPlayer, favouriteToWinPlayer, averageWinPoints);
 }
 
-function displaySummaryCard(mostWinsPlayer, mostLikelyToWinPlayer, averageWinPoints) {
+function displaySummaryCard(mostWinsPlayer, favouriteToWinPlayer, averageWinPoints) {
     const summaryCard = document.createElement('div');
     summaryCard.className = 'player-card';
 
     summaryCard.innerHTML = `
         <strong>Summary Statistics:</strong><br>
-        Player with the Most Wins: ${mostWinsPlayer} (${playerWins[mostWinsPlayer]} wins)<br>
-        Player Most Likely to Win (based on avg placement): ${mostLikelyToWinPlayer} (Avg Placement: ${(playerAveragePlacement[mostLikelyToWinPlayer] / playerTotalPlacements[mostLikelyToWinPlayer]).toFixed(2)})<br>
-        Average Points Needed to Win: ${averageWinPoints} points<br>
+        Most Wins: ${mostWinsPlayer} (${playerWins[mostWinsPlayer]} wins)<br>
+        Highest Avg score: ${favouriteToWinPlayer} (Avg Score: ${(playerTotalPoints[favouriteToWinPlayer] / playerTotalPlacements[favouriteToWinPlayer]).toFixed(2)})<br>
+        Average winner points: ${averageWinPoints} points<br>
     `;
 
     const parentContainer = timeline.parentElement;

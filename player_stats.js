@@ -3,7 +3,7 @@ const playerList = document.querySelector('.player-list');
 
 // Fetch data from Firebase
 db.ref().on('value', snapshot => {
-    const data = snapshot.val();
+    const data = snapshot.val().events; // Adjusted to access events key
     const aggregatedData = aggregatePlayerData(data);
     displayAggregatedData(aggregatedData);
 });
@@ -12,7 +12,7 @@ function aggregatePlayerData(data) {
     let playerStats = {};
 
     for (let year in data) {
-        const participantsData = data[year];
+        const participantsData = data[year].players; // Adjusted to access players key
 
         for (let participant in participantsData) {
             let details = participantsData[participant];
@@ -28,22 +28,20 @@ function aggregatePlayerData(data) {
                 };
             }
 
-            if (details.points && !isNaN(details.points)) {
+            if (details.points && details.points !== "" && !isNaN(details.points)) {
                 playerStats[participant].totalPoints += parseInt(details.points);
                 playerStats[participant].totalGames++;
             }
 
-            if (details.placement && !isNaN(details.placement)) {
-                playerStats[participant].totalPlacement += parseInt(details.placement);
+            if (details.placement && details.placement !== "" && !isNaN(details.placement)) {
+                playerStats[participant].totalPlacement += details.placement;
                 playerStats[participant].validPlacementGames++;
-                if (details.placement === "1") {
+                if (details.placement === 1.0) {  // Adjusted to compare with number
                     playerStats[participant].wins++;
                 }
             }
 
-            if (details.organiser && details.organiser.toLowerCase() === "yes") {
-                playerStats[participant].organizerCount++;
-            }
+            // Removed the organizer logic as it's not present in the provided JSON
         }
     }
 
@@ -53,16 +51,15 @@ function aggregatePlayerData(data) {
 function displayAggregatedData(playerStats) {
     for (let player in playerStats) {
         const stats = playerStats[player];
-        const avgPoints = (stats.totalPoints / stats.totalGames).toFixed(2);
-        const avgPlacement = (stats.totalPlacement / stats.validPlacementGames).toFixed(2);
+        const avgPoints = (stats.totalGames !== 0 ? (stats.totalPoints / stats.totalGames).toFixed(2) : "0");
+        const avgPlacement = (stats.validPlacementGames !== 0 ? (stats.totalPlacement / stats.validPlacementGames).toFixed(2) : "0");
         const wins = stats.wins;
-        const organizerCount = stats.organizerCount;
 
-        displayPlayerStats(player, avgPoints, avgPlacement, wins, organizerCount);
+        displayPlayerStats(player, avgPoints, avgPlacement, wins);
     }
 }
 
-function displayPlayerStats(playerName, avgPoints, avgPlacement, wins, organizerCount) {
+function displayPlayerStats(playerName, avgPoints, avgPlacement, wins) {
     const playerCard = document.createElement('div');
     playerCard.className = 'player-card';
 
@@ -71,7 +68,6 @@ function displayPlayerStats(playerName, avgPoints, avgPlacement, wins, organizer
         Avg Points: ${avgPoints}<br>
         Avg Placement: ${avgPlacement}<br>
         Number of Wins: ${wins}<br>
-        Organiser: ${organizerCount} times
     `;
 
     playerList.appendChild(playerCard);
